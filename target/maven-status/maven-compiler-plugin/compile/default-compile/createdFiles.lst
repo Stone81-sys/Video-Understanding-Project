@@ -1,0 +1,9 @@
+com\example\demo\DemoApplication.class
+com\example\demo\config\AliyunConfig.class
+com\example\demo\constant\AliyunConstants.class
+com\example\demo\model\VideoRecognitionRequest.class
+com\example\demo\controller\VideoRecognitionController.class
+com\example\demo\text\GetAsyncJobResult.class
+com\example\demo\service\VideoRecognitionService.class
+com\example\demo\text\RecognizeVideoCastCrewList.class
+com\example\demo\model\ApiResponse.class

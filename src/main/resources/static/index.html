@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频演员识别</title>
+    <style>
+        :root{--primary:#4f46e5;--ph:#4338ca;--success:#059669;--danger:#dc2626;--warning:#d97706;--card:#fff;--text:#1e293b;--t2:#64748b;--bd:#e2e8f0;--r:12px}
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;color:var(--text);min-height:100vh}
+        .app{max-width:800px;margin:0 auto;padding:40px 20px 60px}
+        .header{text-align:center;margin-bottom:30px}
+        .header .icon{width:56px;height:56px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:16px;display:inline-flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:14px;color:#fff}
+        .header h1{font-size:24px;font-weight:700}
+        .header p{font-size:14px;color:var(--t2);margin-top:4px}
+        .card{background:var(--card);border-radius:var(--r);box-shadow:0 1px 3px rgba(0,0,0,.06);padding:24px;margin-bottom:14px}
+        .card-title{font-size:15px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+        .card-title .dot{width:8px;height:8px;background:var(--primary);border-radius:50%;flex-shrink:0}
+        .upload-area{border:2px dashed var(--bd);border-radius:var(--r);padding:36px 20px;text-align:center;cursor:pointer;transition:all .2s;background:#fafbff;position:relative}
+        .upload-area:hover,.upload-area.drag-over{border-color:#818cf8;background:#eef2ff}
+        .upload-area.has-file{border-color:var(--success);border-style:solid;background:#f0fdf4}
+        .upload-icon{font-size:44px;margin-bottom:10px;display:block}
+        .upload-text{font-size:15px;font-weight:500}
+        .upload-hint{font-size:13px;color:var(--t2);margin-top:4px}
+        .upload-area input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer}
+        .file-info{display:none;align-items:center;gap:10px;margin-top:14px;padding:12px 14px;background:#f1f5f9;border-radius:8px}
+        .file-info.visible{display:flex}
+        .file-info .file-name{flex:1;font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .file-info .file-size{font-size:12px;color:var(--t2);flex-shrink:0}
+        .file-info .remove-btn{background:none;border:none;color:var(--danger);cursor:pointer;font-size:18px;padding:0 4px;flex-shrink:0}
+        .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 28px;font-size:15px;font-weight:600;border:none;border-radius:8px;cursor:pointer;transition:all .2s;width:100%}
+        .btn-primary{background:var(--primary);color:#fff}
+        .btn-primary:hover{background:var(--ph)}
+        .btn-primary:disabled{opacity:.5;cursor:not-allowed}
+        .btn-download{background:var(--success);color:#fff;padding:8px 18px;font-size:13px;text-decoration:none;border-radius:6px;width:auto;flex-shrink:0}
+        .btn-download:hover{filter:brightness(1.1)}
+        .spinner{display:none;width:20px;height:20px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+        .loading .spinner{display:inline-block}
+        .loading .btn-label{display:none}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        .status-bar{display:none;padding:12px 16px;border-radius:8px;margin-bottom:14px;font-size:14px;align-items:flex-start;gap:10px}
+        .status-bar.visible{display:flex}
+        .status-bar.info{background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe}
+        .status-bar.success{background:#f0fdf4;color:#065f46;border:1px solid #a7f3d0}
+        .status-bar.error{background:#fef2f2;color:#991b1b;border:1px solid #fecaca}
+        .status-bar.warning{background:#fefce8;color:#92400e;border:1px solid #fde68a}
+        .poll-info{font-size:13px;color:var(--t2);text-align:center;margin-top:8px}
+        .poll-detail{font-size:12px;color:var(--t2);margin-top:4px;font-family:monospace;word-break:break-all}
+        .result-section{display:none}
+        .result-section.visible{display:block}
+        .download-group{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+        .download-item{flex:1;min-width:200px;padding:14px;background:#f8fafc;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;gap:10px}
+        .download-item .label{font-size:14px;font-weight:500}
+        .download-item .label small{display:block;font-size:11px;color:var(--t2);font-weight:400;margin-top:2px}
+        .json-viewer{background:#1e293b;color:#e2e8f0;border-radius:8px;padding:18px;font-family:Consolas,monospace;font-size:13px;line-height:1.7;overflow-x:auto;max-height:500px;overflow-y:auto;white-space:pre-wrap;word-break:break-all}
+        .json-viewer .key{color:#93c5fd}.json-viewer .string{color:#86efac}.json-viewer .number{color:#fde68a}.json-viewer .boolean{color:#c4b5fd}.json-viewer .null{color:#f87171}
+        .footer{text-align:center;padding:12px 0;font-size:12px;color:var(--t2)}
+        @media(max-width:600px){.app{padding:20px 12px 40px}.card{padding:18px}.download-group{flex-direction:column}}
+    </style>
+</head>
+<body>
+<div class="app">
+    <header class="header">
+        <div class="icon">&#127916;</div>
+        <h1>视频演员识别</h1>
+        <p>上传视频，AI 自动识别演员并生成中英文字幕</p>
+    </header>
+    <div class="card">
+        <div class="card-title"><span class="dot"></span>第一步：选择视频文件</div>
+        <div class="upload-area" id="uploadArea">
+            <span class="upload-icon">&#128194;</span>
+            <div class="upload-text">点击或拖拽视频文件到此处</div>
+            <div class="upload-hint">支持 MP4 / AVI / MOV，最大 100MB</div>
+            <input type="file" id="fileInput" accept="video/*">
+        </div>
+        <div class="file-info" id="fileInfo">
+            <span class="file-name" id="fileName"></span>
+            <span class="file-size" id="fileSize"></span>
+            <button class="remove-btn" id="removeBtn" title="移除">&times;</button>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-title"><span class="dot"></span>第二步：开始视频解析</div>
+        <div class="status-bar info" id="statusBar">
+            <span id="statusIcon" style="flex-shrink:0;">&#9203;</span>
+            <span id="statusText"></span>
+        </div>
+        <div class="poll-info" id="pollInfo" style="display:none;">
+            <div>已等待 <span id="pollTime">0</span> 秒（最大 <span id="pollMax">600</span> 秒）</div>
+            <div class="poll-detail">阿里云状态: <span id="pollAliyunStatus">-</span></div>
+        </div>
+        <button class="btn btn-primary" id="submitBtn" disabled>
+            <span class="btn-label">&#128269; 开始解析</span>
+            <span class="spinner"></span>
+        </button>
+    </div>
+    <div class="card result-section" id="resultSection">
+        <div class="card-title"><span class="dot"></span>识别结果</div>
+        <div class="download-group">
+            <div class="download-item" id="chineseDownload" style="display:none;">
+                <div class="label">中文字幕<small>标准 SRT 格式</small></div>
+                <a class="btn-download" id="chineseLink" href="#" target="_blank">&#128229; 下载</a>
+            </div>
+            <div class="download-item" id="englishDownload" style="display:none;">
+                <div class="label">英文字幕<small>标准 SRT 格式</small></div>
+                <a class="btn-download" id="englishLink" href="#" target="_blank">&#128229; 下载</a>
+            </div>
+        </div>
+        <div class="download-item" id="noSubtitleInfo" style="display:none;background:#fefce8;border-color:#fde68a;">
+            <span style="font-size:14px;color:#a16207;">&#9888; 该视频未检测到字幕数据</span>
+        </div>
+        <div style="margin-top:14px;">
+            <div style="font-size:13px;font-weight:600;color:var(--t2);margin-bottom:6px;">&#128203; 响应数据</div>
+            <div class="json-viewer" id="jsonViewer">暂无数据</div>
+        </div>
+    </div>
+    <div class="footer">Powered by 阿里云视觉智能开放平台</div>
+</div>
+
+<script>
+(function(){
+    'use strict';
+
+    var el = function(id){return document.getElementById(id);};
+    var uploadArea=el('uploadArea'), fileInput=el('fileInput'), fileInfo=el('fileInfo');
+    var fileName=el('fileName'), fileSize=el('fileSize'), removeBtn=el('removeBtn');
+    var submitBtn=el('submitBtn'), statusBar=el('statusBar'), statusIcon=el('statusIcon'), statusText=el('statusText');
+    var pollInfo=el('pollInfo'), pollTime=el('pollTime'), pollMax=el('pollMax'), pollAliyunStatus=el('pollAliyunStatus');
+    var resultSection=el('resultSection'), jsonViewer=el('jsonViewer');
+    var chineseDownload=el('chineseDownload'), englishDownload=el('englishDownload');
+    var chineseLink=el('chineseLink'), englishLink=el('englishLink'), noSubtitleInfo=el('noSubtitleInfo');
+
+    var POLL_INTERVAL_MS = 5000;
+    var RATE_LIMIT_INTERVAL_MS = 10000;
+    var MAX_POLL_SECONDS = 600;
+    var MAX_RETRY_COUNT = 3;
+
+    var selectedFile=null, pollTimer=null, seconds=0, retryCount=0, currentInterval=POLL_INTERVAL_MS;
+    pollMax.textContent = MAX_POLL_SECONDS;
+
+    function fmtSize(b){return b<1024?b+' B':b<1048576?(b/1024).toFixed(1)+' KB':(b/1048576).toFixed(1)+' MB'}
+
+    function highlightJSON(json){
+        if(typeof json==='string'){try{json=JSON.parse(json)}catch(e){return json.replace(/&/g,'&amp;').replace(/</g,'&lt;')}}
+        return JSON.stringify(json,null,2)
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+            .replace(/("(?:[^"\\]|\\.)*"(\\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\\-]?\d+)?)/g,function(m,k){
+                if(!k) return m;
+                var c='number';
+                if(/^"/.test(m)) c=k[1]? 'key':'string';
+                else if(/true|false/.test(m)) c='boolean';
+                else if(/null/.test(m)) c='null';
+                return '<span class="'+c+'">'+m+'</span>';
+            });
+    }
+
+    function setFile(f){
+        selectedFile=f;
+        if(f){fileName.textContent=f.name;fileSize.textContent=fmtSize(f.size);fileInfo.classList.add('visible');uploadArea.classList.add('has-file');submitBtn.disabled=false}
+        else{fileInfo.classList.remove('visible');uploadArea.classList.remove('has-file');submitBtn.disabled=true}
+    }
+
+    fileInput.addEventListener('change',function(){setFile(fileInput.files[0]||null)});
+    removeBtn.addEventListener('click',function(e){e.stopPropagation();fileInput.value='';setFile(null);stopPoll()});
+    uploadArea.addEventListener('dragover',function(e){e.preventDefault();uploadArea.classList.add('drag-over')});
+    uploadArea.addEventListener('dragleave',function(e){e.preventDefault();uploadArea.classList.remove('drag-over')});
+    uploadArea.addEventListener('drop',function(e){e.preventDefault();uploadArea.classList.remove('drag-over');if(e.dataTransfer.files.length){fileInput.files=e.dataTransfer.files;setFile(e.dataTransfer.files[0])}});
+
+    function showStatus(cls, icon, msg){
+        statusBar.className='status-bar '+cls+' visible';statusIcon.innerHTML=icon;statusText.textContent=msg;
+    }
+
+    function stopPoll(){
+        if(pollTimer){clearInterval(pollTimer);pollTimer=null}
+        pollInfo.style.display='none';pollAliyunStatus.textContent='-';
+        sessionStorage.removeItem('videoJobId');sessionStorage.removeItem('videoJobStart');
+    }
+
+    function resetUI(){
+        stopPoll();seconds=0;retryCount=0;currentInterval=POLL_INTERVAL_MS;
+        resultSection.classList.remove('visible');
+        chineseDownload.style.display='none';englishDownload.style.display='none';
+        noSubtitleInfo.style.display='none';jsonViewer.innerHTML='暂无数据';
+    }
+
+    function pollOnce(jobId){
+        return fetch('/api/video/result/'+jobId)
+            .then(function(r){retryCount=0;return r.json()})
+            .catch(function(err){
+                retryCount++;
+                if(retryCount<=MAX_RETRY_COUNT){
+                    console.warn('网络失败，重试#'+retryCount,err);
+                    return new Promise(function(resolve){
+                        setTimeout(function(){resolve(pollOnce(jobId))},Math.pow(2,retryCount)*1000);
+                    });
+                }
+                throw err;
+            });
+    }
+
+    // 命名函数，可在 setInterval 中安全使用，也支持限流后重建定时器
+    function handlePollTick(jobId){
+        seconds = Math.floor(seconds + currentInterval/1000);
+        pollTime.textContent = seconds;
+
+        // 超时熔断：无论什么状态都检查
+        if(seconds >= MAX_POLL_SECONDS){
+            stopPoll();submitBtn.classList.remove('loading');
+            showStatus('warning','&#9209;','轮询超时（'+MAX_POLL_SECONDS+'秒），请重新上传');
+            return;
+        }
+
+        pollOnce(jobId).then(function(result){
+            if(result.code!==200){
+                // 非 200 可能是临时网关错误，继续轮询
+                pollAliyunStatus.textContent = 'HTTP '+result.code;
+                return;
+            }
+            var data = result.data||{};
+            var status = data.status||'UNKNOWN';
+            var errorCode = data.errorCode||'';
+            var errorMessage = data.errorMessage||'';
+            var aliyunStatus = data.aliyunStatus||status;
+            var msg = data.message||'';
+
+            // 实时显示阿里云真实状态
+            var info = aliyunStatus;
+            if(errorCode) info += ' | '+errorCode;
+            if(errorMessage) info += ' | '+errorMessage;
+            pollAliyunStatus.textContent = info;
+
+            // ----- 按 errorCode 处理 -----
+            if(errorCode==='AUTH_ERROR'){
+                stopPoll();submitBtn.classList.remove('loading');
+                showStatus('error','&#128273;','鉴权失败: '+msg+'。请检查 application.properties');
+                return;
+            }
+            if(errorCode==='INVALID_JOBID'||errorCode==='INVALID_RESPONSE'||errorCode==='INVALID_JOBID'){
+                stopPoll();submitBtn.classList.remove('loading');
+                showStatus('error','&#10060;','任务无效: '+msg+'。请重新上传');
+                return;
+            }
+            if(errorCode==='RATE_LIMITED'){
+                currentInterval = RATE_LIMIT_INTERVAL_MS;
+                clearInterval(pollTimer);
+                pollTimer = setInterval(function(){handlePollTick(jobId)}, RATE_LIMIT_INTERVAL_MS);
+                showStatus('warning','&#9888;','触发限流，已延长间隔至 '+(RATE_LIMIT_INTERVAL_MS/1000)+' 秒');
+                return;
+            }
+            if(status==='ERROR'){
+                // 可重试错误，继续轮询
+                return;
+            }
+
+            // 恢复正常间隔
+            currentInterval = POLL_INTERVAL_MS;
+
+            // ----- 按 status 处理 -----
+            switch(status){
+            case 'PROCESS_SUCCESS':
+                stopPoll();submitBtn.classList.remove('loading');
+                showStatus('success','&#9989;','识别完成！用时 '+seconds+' 秒');
+                resultSection.classList.add('visible');
+                var display = {
+                    code: result.code, message: result.message,
+                    status: status, jobId: data.jobId,
+                    chineseSubtitleUrl: result.chineseSubtitleUrl||null,
+                    englishSubtitleUrl: result.englishSubtitleUrl||null,
+                    rawResponse: result.rawResponse?JSON.parse(result.rawResponse):null
+                };
+                jsonViewer.innerHTML = highlightJSON(display);
+                if(result.chineseSubtitleUrl){chineseLink.href=result.chineseSubtitleUrl;chineseDownload.style.display='flex'}
+                else{chineseDownload.style.display='none'}
+                if(result.englishSubtitleUrl){englishLink.href=result.englishSubtitleUrl;englishDownload.style.display='flex'}
+                else{englishDownload.style.display='none'}
+                noSubtitleInfo.style.display = (!result.chineseSubtitleUrl&&!result.englishSubtitleUrl)?'flex':'none';
+                resultSection.scrollIntoView({behavior:'smooth',block:'start'});
+                break;
+            case 'PROCESS_FAILED':
+                stopPoll();submitBtn.classList.remove('loading');
+                showStatus('error','&#10060;','阿里云处理失败: '+msg);
+                break;
+            case 'QUEUING':
+                showStatus('info','&#9203;','阿里云排队中...已等待 '+seconds+' 秒');
+                break;
+            // PROCESSING / SUBMITTED → 继续轮询，不额外提示
+            }
+        }).catch(function(err){
+            // 网络最终失败
+            stopPoll();submitBtn.classList.remove('loading');
+            showStatus('error','&#128268;','网络失败（重试'+MAX_RETRY_COUNT+'次后中断）: '+err.message);
+        });
+    }
+
+    function startPoll(jobId){
+        stopPoll();
+        seconds=0;retryCount=0;currentInterval=POLL_INTERVAL_MS;
+        pollInfo.style.display='block';pollTime.textContent='0';pollAliyunStatus.textContent='-';
+        showStatus('info','&#9203;','任务已提交，正在轮询...');
+        submitBtn.classList.add('loading');
+        sessionStorage.setItem('videoJobId',jobId);
+        sessionStorage.setItem('videoJobStart',Date.now().toString());
+        pollTimer = setInterval(function(){handlePollTick(jobId)}, currentInterval);
+    }
+
+    submitBtn.addEventListener('click',function(){
+        if(!selectedFile) return;
+        resetUI();
+        submitBtn.classList.add('loading');
+        showStatus('info','&#9200;','正在上传视频...');
+
+        var fd = new FormData();fd.append('video',selectedFile);
+        fetch('/api/video/recognize-cast-upload',{method:'POST',body:fd})
+            .then(function(r){return r.json()})
+            .then(function(result){
+                if(result.code===200&&result.data&&result.data.jobId){
+                    startPoll(result.data.jobId);
+                }else{
+                    submitBtn.classList.remove('loading');
+                    showStatus('error','&#10060;','提交失败: '+(result.message||'未知'));
+                }
+            }).catch(function(err){
+                submitBtn.classList.remove('loading');
+                showStatus('error','&#128268;','网络错误: '+err.message);
+            });
+    });
+
+    // 页面恢复轮询
+    (function(){
+        var savedJobId=sessionStorage.getItem('videoJobId');
+        var savedStart=sessionStorage.getItem('videoJobStart');
+        if(!savedJobId||!savedStart) return;
+        var elapsed=Math.floor((Date.now()-parseInt(savedStart))/1000);
+        if(elapsed>=MAX_POLL_SECONDS){
+            sessionStorage.removeItem('videoJobId');sessionStorage.removeItem('videoJobStart');
+            return;
+        }
+        seconds=elapsed;currentInterval=POLL_INTERVAL_MS;retryCount=0;
+        submitBtn.classList.add('loading');submitBtn.disabled=true;
+        pollInfo.style.display='block';pollTime.textContent=elapsed;
+        showStatus('info','&#9203;','已恢复轮询: '+savedJobId);
+        pollTimer = setInterval(function(){handlePollTick(savedJobId)}, currentInterval);
+    })();
+})();
+</script>
+</body>
+</html>
